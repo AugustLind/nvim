@@ -32,17 +32,21 @@ vim.opt.undolevels = 10000
 vim.opt.splitright = true
 vim.opt.splitbelow = true
 vim.opt.mouse = "a"
+vim.opt.backupcopy = "yes" -- overwrite file in place so `typst watch` doesn't lose the inode on save
 
 -- Performance
 vim.opt.updatetime = 250
 vim.opt.timeoutlen = 300
 
 -- Typst filetype detection
-vim.filetype.add({
-	extension = {
-		typ = "typst",
-		m = "matlab",
-	},
+vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+    pattern = { "*.typ" },
+    callback = function() vim.bo.filetype = "typst" end,
+})
+
+vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+    pattern = { "*.m" },
+    callback = function() vim.bo.filetype = "matlab" end,
 })
 
 -- Disable inlay hints globally

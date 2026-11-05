@@ -4,7 +4,7 @@ Personal Neovim configuration built on [lazy.nvim](https://github.com/folke/lazy
 
 ## Requirements
 
-- Neovim **0.11+**
+- Neovim **0.12+**
 - [git](https://git-scm.com/)
 - [ripgrep](https://github.com/BurntSushi/ripgrep) — for Telescope live grep
 - [make](https://www.gnu.org/software/make/) — for telescope-fzf-native
@@ -50,8 +50,7 @@ python -m venv ~/.local/share/nvim/debugpy-venv
 - **noice.nvim** — better cmdline, messages, and notifications
 - **nvim-notify** — toast-style notifications
 - **which-key** — keymap hint popups
-- **nvim-scrollbar** — scrollbar with diagnostic/git markers
-- **indent-blankline + mini.indentscope** — indent guides with animated scope
+- **indent-blankline** — indent guides and scope highlighting
 
 ### Navigation
 - **Telescope** + fzf-native — fuzzy finder for files, grep, buffers, etc.
@@ -64,7 +63,7 @@ python -m venv ~/.local/share/nvim/debugpy-venv
 - **LuaSnip** + friendly-snippets — snippet engine
 - **nvim-autopairs** — auto-close brackets and quotes
 - **nvim-surround** — surround text objects
-- **Comment.nvim** — toggle comments
+- Native `gc` / `gcc` — toggle comments
 - **mini.ai** — extended text objects (`af`, `if`, `ac`, `ic`, etc.)
 - **nvim-ts-autotag** — auto-close/rename HTML and JSX tags
 - **nvim-ufo** — better code folding with Treesitter
@@ -99,7 +98,6 @@ python -m venv ~/.local/share/nvim/debugpy-venv
 ### Other
 - **Trouble** — diagnostics, quickfix, and symbol list panel
 - **todo-comments** — highlight and search TODO/FIXME/etc.
-- **outline.nvim** — symbols outline panel
 - **nvim-spectre** — project-wide find and replace
 - **Toggleterm** — floating/split terminal
 - **persistence.nvim** — session save/restore
@@ -187,4 +185,13 @@ Leader key: `<Space>`
 | `<leader>cH` | Switch header/source |
 | `<leader>cg` | CMake generate |
 | `<leader>cb` | CMake build |
-| `<leader>cr` | CMake run |
+| `<leader>cR` | CMake run |
+
+## Configuration layout
+
+`init.lua` loads `lua/august/options.lua`, `plugins.lua`, and `keymaps.lua`.
+`treesitter_compat.lua` adapts legacy Treesitter query callbacks for Neovim 0.12.
+Project detection uses the current LSP client API.
+
+`kj` and `jk` leave insert mode. Save explicitly with `:w` or `<leader>w`;
+formatting runs on save. Symbols use Trouble (`<leader>cs`, `<leader>o`, or `<leader>xs`).

@@ -2,6 +2,14 @@
 
 Personal Neovim configuration built on [lazy.nvim](https://github.com/folke/lazy.nvim).
 
+## Changed behavior
+
+- Autosave is removed. Use `Space w` or `:w` to save; formatting runs on save.
+- `kj` and `jk` exit insert mode without saving the buffer.
+- Rename uses `Space cr`; CMake Run uses `Space cR` (capital R).
+- Symbols use Trouble: `Space cs`, `Space o`, or `Space xs`.
+- Comments use Neovim's native `gc` / `gcc`.
+
 ## Requirements
 
 - Neovim **0.12+**
@@ -11,11 +19,11 @@ Personal Neovim configuration built on [lazy.nvim](https://github.com/folke/lazy
 - A **Nerd Font** — for icons (e.g. [JetBrainsMono Nerd Font](https://www.nerdfonts.com/))
 - A C compiler — for Treesitter parsers
 
-Language-specific tools (installed via Mason inside Neovim):
+Configured language tools (LSP names below are configuration identifiers; see installation notes for package names):
 
 | Language | LSP | Formatter | Debugger |
 |---|---|---|---|
-| Python | pyright, ruff | ruff_format | debugpy |
+| Python | pyright, ruff | ruff_fix, then ruff_format | debugpy |
 | Rust | rust-analyzer (rustaceanvim) | rustfmt | codelldb |
 | C/C++ | clangd | clang-format | codelldb |
 | TypeScript/JS | ts_ls, eslint | prettier | — |
@@ -30,14 +38,49 @@ Language-specific tools (installed via Mason inside Neovim):
 git clone git@github.com:AugustLind/nvim.git ~/.config/nvim
 ```
 
-Open Neovim — lazy.nvim bootstraps itself, then installs all plugins automatically. Run `:MasonInstall <tool>` to install any LSP servers or formatters not auto-installed.
+Open Neovim — lazy.nvim bootstraps itself, then installs the configured plugins.
+Mason LSP setup ensures these servers are installed: `lua_ls`, `pyright`, `ruff`,
+`clangd`, `ts_ls`, `eslint`, `tinymist`, and `matlab_ls`.
+
+Formatters and debugger adapters need separate installation. Open `:Mason` to
+inspect packages and installation status. For example:
+
+```vim
+:MasonInstall stylua prettier clang-format typstyle taplo codelldb
+```
+
+Conform formatter names are not always executable or Mason package names:
+
+| Config identifier | Executable / installation |
+|---|---|
+| `ruff_fix`, `ruff_format` | Both use `ruff`; the Ruff LSP installation supplies it |
+| `cmake_format` | Uses `cmake-format`, supplied by the Python `cmakelang` package |
+| `rustfmt` | Install with the Rust toolchain, e.g. `rustup component add rustfmt` |
+
+Install Rust and Cargo separately; rustaceanvim configures the language client.
+With a rustup toolchain, install `rust-analyzer` and `clippy` using
+`rustup component add rust-analyzer clippy`.
+Use `:ConformInfo` to check which formatter executables are available.
+
+### Machine-specific setup
 
 For Python debugging, set up a debugpy venv:
 
 ```bash
-python -m venv ~/.local/share/nvim/debugpy-venv
+python3 -m venv ~/.local/share/nvim/debugpy-venv
 ~/.local/share/nvim/debugpy-venv/bin/pip install debugpy
 ```
+
+The config prefers `~/.local/share/nvim/debugpy-venv/bin/python` for debugging
+and falls back to `python` on PATH. That fallback interpreter must have
+`debugpy` installed. Use `Space cv` to select a project Python environment.
+
+C/C++ and Rust debugging expect Mason's `codelldb` adapter under
+`stdpath("data") .. "/mason/bin/codelldb"`.
+
+MATLAB itself must be installed separately. Change the `matlab_ls`
+`settings.matlab.installPath` in [plugins.lua](lua/august/plugins.lua) from
+`/usr/local/MATLAB/R2024b` to your MATLAB installation directory.
 
 ## What's included
 
@@ -118,6 +161,9 @@ Leader key: `<Space>`
 | `<C-\>` | Toggle terminal |
 | `<leader>cf` | Format file |
 | `<leader>l` | Open Lazy plugin manager |
+| `<leader>bd` | Delete buffer while keeping window layout |
+| `<leader>bD` | Force-delete buffer |
+| `<S-h>` / `<S-l>` | Previous/next buffer |
 
 ### Navigation
 | Key | Action |
@@ -128,6 +174,7 @@ Leader key: `<Space>`
 | `<leader>fg` | Live grep |
 | `<leader>fb` | Find buffers |
 | `<leader>fr` | Recent files |
+| `<leader>fp` | Find projects |
 | `<leader>/` | Search in buffer |
 | `<leader>ha` | Harpoon: add file |
 | `<leader>hh` | Harpoon: open menu |
@@ -143,9 +190,22 @@ Leader key: `<Space>`
 | `<leader>ca` | Code actions |
 | `<leader>cr` | Rename symbol |
 | `<leader>cI` | Toggle inlay hints |
-| `<leader>cs` | Symbols outline |
+| `<leader>cs` / `<leader>o` / `<leader>xs` | Toggle Trouble symbols |
 | `gl` | Line diagnostics |
 | `[d` / `]d` | Previous/next diagnostic |
+
+### Search and sessions
+
+| Key | Action |
+|---|---|
+| `<leader>sr` | Open project-wide find and replace |
+| `<leader>sw` | Find/replace current word, or selection in visual mode |
+| `<leader>qs` | Restore session for the current directory |
+| `<leader>ql` | Restore the last session |
+| `<leader>qd` | Stop saving the current session |
+
+Session restoration restores editor layout and buffers; save file contents
+explicitly with `:w` or `<leader>w`.
 
 ### Git
 | Key | Action |
@@ -189,9 +249,46 @@ Leader key: `<Space>`
 
 ## Configuration layout
 
-`init.lua` loads `lua/august/options.lua`, `plugins.lua`, and `keymaps.lua`.
-`treesitter_compat.lua` adapts legacy Treesitter query callbacks for Neovim 0.12.
-Project detection uses the current LSP client API.
+| File | Purpose |
+|---|---|
+| [init.lua](init.lua) | Loads the configuration modules |
+| [options.lua](lua/august/options.lua) | Editor options, filetype detection, and general autocommands |
+| [plugins.lua](lua/august/plugins.lua) | Plugin declarations, LSP servers, formatters, and debugger setup |
+| [keymaps.lua](lua/august/keymaps.lua) | General and language-specific mappings; plugin-local mappings also live in plugins.lua |
+| [treesitter_compat.lua](lua/august/treesitter_compat.lua) | Legacy Treesitter query callback compatibility for Neovim 0.12 |
+| [lazy-lock.json](lazy-lock.json) | Locked plugin revisions |
 
-`kj` and `jk` leave insert mode. Save explicitly with `:w` or `<leader>w`;
-formatting runs on save. Symbols use Trouble (`<leader>cs`, `<leader>o`, or `<leader>xs`).
+## Troubleshooting
+
+### Treesitter errors in Markdown
+
+Errors such as `attempt to call method 'range' (a nil value)` can occur when
+legacy Treesitter query handlers receive capture lists from Neovim 0.12.
+This config keeps the legacy Treesitter setup API and loads
+`treesitter_compat.lua` before configuring it. The adapter converts capture
+lists to single nodes for callbacks registered with `all = false`.
+
+Keep the compatibility module with this configuration. Moving Treesitter to
+its rewritten API requires reviewing both its setup and this adapter.
+After updating configuration files, restart Neovim.
+
+### Deprecated LSP client lookup
+
+The installed project.nvim version calls the deprecated
+`vim.lsp.buf_get_clients()`. Its root detection is overridden in
+`plugins.lua` to use `vim.lsp.get_clients({ bufnr = 0 })` while retaining
+filetype and ignored-client filtering. Keep that override until the plugin
+uses the current API. Use `:checkhealth vim.deprecated` to investigate other
+deprecation messages.
+
+### Formatting and language tools
+
+Use `:ConformInfo` for missing formatters, `:Mason` for package installation
+status, and `:checkhealth vim.lsp` for LSP setup. Python saves run Ruff fixes
+before Ruff formatting. Leaving insert mode with `kj` does not save or format.
+
+### Updating an existing checkout
+
+Commit or stash local changes before pulling, then run `git pull --ff-only`
+in the configuration repository. Restart Neovim afterward. Local
+`*.backup-*` configuration backups are ignored by Git.
